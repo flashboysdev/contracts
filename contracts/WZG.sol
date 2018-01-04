@@ -90,6 +90,9 @@ contract ERC20 {
 
 }
 
+// TODO: basic implementation
+// We still have to add balanceAt (like in MiniMeToken)
+// This Token will be controled by controller (this has not been implemented)
 contract StandardToken is ERC20, Ownable {
 
   using SafeMath for uint;

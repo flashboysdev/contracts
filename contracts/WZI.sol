@@ -64,6 +64,7 @@ contract StandardToken is ERC20, Ownable {
 
 
 
+  //events
   event Mint(address _to, uint _amount);
   event Burn(address _from, uint _amount);
   event Lock(address _from, uint _amount);
@@ -72,13 +73,18 @@ contract StandardToken is ERC20, Ownable {
   event Pause();
   event Unpause();
 
+  //struct to where we can lockedAmount 
+  //lastUpdate - time when we last locked tokens
+  //lastClaimed - time when we claimed the bonus
   struct Locked {
       uint lockedAmount;
       uint lastUpdated;
       uint lastClaimed;
   }
   
+  //used to pause the transfer
   bool public pauseTransfer = false;
+  //minimum amount to lock
   uint public constant MIN_LOCK_AMOUNT = 100000;   
 
   mapping (address => uint) balances;
@@ -86,22 +92,25 @@ contract StandardToken is ERC20, Ownable {
   mapping (address => mapping (address => uint)) internal allowed;
   
   /*
-  * Don't accept ETH
+  * Don't accept ETH 
   */
   function () public payable {
     revert();
   }
 
+  //pause transfer
   function pause() public onlyOwner {
       pauseTransfer = true;
       Pause();
   }
 
+  //unpause transfer
   function unpause() public onlyOwner {
       pauseTransfer = false;
       Unpause();
   }
 
+  //mint new tokens and update totalSupply
   function mint(address _to, uint _amount) public onlyOwner returns (bool) {
       require(_to != address(0));
       totalSupply = totalSupply.add(_amount);
@@ -111,6 +120,9 @@ contract StandardToken is ERC20, Ownable {
   } 
 
 
+  //burn the tokens from address 
+  //TODO: this is just a simple implementation; still need to see how will the tokens be burned
+  // ie how are we going to call this function?
   function burn(address _from, uint _amount) internal {
       require(_from != address(0));
       balances[_from] = balances[_from].sub(_amount);
@@ -118,6 +130,8 @@ contract StandardToken is ERC20, Ownable {
       Burn(_from, _amount);
   }
 
+  //function for locking the tokens
+  // this still requires work; I'm not sure the current implementation is ok
   function lock(uint _amount) public returns (bool) {
       require(msg.sender != address(0));
       require(_amount >= MIN_LOCK_AMOUNT);
@@ -129,6 +143,7 @@ contract StandardToken is ERC20, Ownable {
       return true;
   }
 
+  //used in lock function - TODO: this will be refactored
   function _checkLock(address _from) internal returns (bool) {
       if (locked[_from].lockedAmount != 0) {
         if (locked[_from].lastUpdated + 30 days >= now) {
@@ -144,11 +159,13 @@ contract StandardToken is ERC20, Ownable {
       return false;
   }
 
+  // function for claiming bonus
   function claimBonus() public returns (bool) {
       require(msg.sender != address(0));
       return _checkLock(msg.sender);
   }
 
+  // unlock the tokens
   function unlock(uint _amount) public returns (bool) {
       require(msg.sender != address(0));
       require(locked[msg.sender].lockedAmount >= _amount);
