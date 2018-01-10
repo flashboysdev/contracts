@@ -1,6 +1,5 @@
 pragma solidity ^0.4.18;
 
-
 library SafeMath {
   function mul(uint a, uint b) internal constant returns (uint) {
     uint c = a * b;
@@ -21,7 +20,6 @@ library SafeMath {
     return c;
   }
 }
-
 
 contract Ownable {
 
@@ -59,12 +57,9 @@ contract ERC20 {
 }
 
 contract StandardToken is ERC20, Ownable {
-
   using SafeMath for uint;
 
-
-
-  //events
+  // events
   event Mint(address _to, uint _amount);
   event Burn(address _from, uint _amount);
   event Lock(address _from, uint _amount);
@@ -73,44 +68,39 @@ contract StandardToken is ERC20, Ownable {
   event Pause();
   event Unpause();
 
-  //struct to where we can lockedAmount 
-  //lastUpdate - time when we last locked tokens
-  //lastClaimed - time when we claimed the bonus
   struct Locked {
       uint lockedAmount;
-      uint lastUpdated;
-      uint lastClaimed;
+      uint lastUpdated; // time when tokens were last locked
+      uint lastClaimed; // time when bonus was last claimed 
   }
   
-  //used to pause the transfer
-  bool public pauseTransfer = false;
-  //minimum amount to lock
+  // used to pause the transfer
+  bool public transferPaused = false;
+  // minimum amount to lock
   uint public constant MIN_LOCK_AMOUNT = 100000;   
 
   mapping (address => uint) balances;
   mapping (address => Locked) locked;
   mapping (address => mapping (address => uint)) internal allowed;
   
-  /*
-  * Don't accept ETH 
-  */
+  // don't accept ETH
   function () public payable {
     revert();
   }
 
-  //pause transfer
+  // pause transfer
   function pause() public onlyOwner {
-      pauseTransfer = true;
+      transferPaused = true;
       Pause();
   }
 
-  //unpause transfer
+  // unpause transfer
   function unpause() public onlyOwner {
-      pauseTransfer = false;
+      transferPaused = false;
       Unpause();
   }
 
-  //mint new tokens and update totalSupply
+  // mint new tokens and update totalSupply
   function mint(address _to, uint _amount) public onlyOwner returns (bool) {
       require(_to != address(0));
       totalSupply = totalSupply.add(_amount);
@@ -120,31 +110,34 @@ contract StandardToken is ERC20, Ownable {
   } 
 
 
-  //burn the tokens from address 
-  //TODO: this is just a simple implementation; still need to see how will the tokens be burned
-  // ie how are we going to call this function?
-  function burn(address _from, uint _amount) internal {
+  // burn the tokens from address 
+  // TODO: this is just a simple implementation; still need to see how 
+  // will the tokens be burned, ie how are we going to call this function?
+  function burn(address _from, uint _amount) public onlyOwner returns (bool) {
       require(_from != address(0));
       balances[_from] = balances[_from].sub(_amount);
       totalSupply = totalSupply.sub(_amount);
       Burn(_from, _amount);
+      return true;
   }
 
-  //function for locking the tokens
-  // this still requires work; I'm not sure the current implementation is ok
+  // token lock
   function lock(uint _amount) public returns (bool) {
       require(msg.sender != address(0));
       require(_amount >= MIN_LOCK_AMOUNT);
-      require(balances[msg.sender] >= _amount.add(locked[msg.sender].lockedAmount));
+      uint newLockedAmount = locked[msg.sender].lockedAmount.add(_amount);
+      require(balances[msg.sender] >= newLockedAmount);
       _checkLock(msg.sender);
-      locked[msg.sender].lockedAmount = locked[msg.sender].lockedAmount.add(_amount);
+      locked[msg.sender].lockedAmount = newLockedAmount;
       locked[msg.sender].lastUpdated = now;
       Lock(msg.sender, _amount);
       return true;
   }
 
-  //used in lock function - TODO: this will be refactored
+  // TODO: Maybe implement this in claimBonus() function fully
   function _checkLock(address _from) internal returns (bool) {
+
+    /*
       if (locked[_from].lockedAmount != 0) {
         if (locked[_from].lastUpdated + 30 days >= now) {
             uint _value = locked[_from].lockedAmount.div(100);
@@ -157,9 +150,20 @@ contract StandardToken is ERC20, Ownable {
         return false;
       }
       return false;
+    */
+
+    if (locked[_from].lockedAmount > 0) {
+      uint mintPercentage = now.sub(locked[_from].lastUpdated).div(30 days);
+      uint mintableAmount = (locked[_from].lockedAmount.mul(mintPercentage)).div(100);
+      locked[_from].lastClaimed = now;
+      mint(_from, mintableAmount);
+      LockClaimed(_from, mintableAmount);
+      return true;
+    }
+    return false;
   }
 
-  // function for claiming bonus
+  // function for claiming bonus -> maybe better claimLock()...
   function claimBonus() public returns (bool) {
       require(msg.sender != address(0));
       return _checkLock(msg.sender);
@@ -169,22 +173,23 @@ contract StandardToken is ERC20, Ownable {
   function unlock(uint _amount) public returns (bool) {
       require(msg.sender != address(0));
       require(locked[msg.sender].lockedAmount >= _amount);
-      if (locked[msg.sender].lockedAmount.sub(_amount) < MIN_LOCK_AMOUNT) {
+      uint newLockedAmount = locked[msg.sender].lockedAmount.sub(_amount);
+      if (newLockedAmount < MIN_LOCK_AMOUNT) {
         balances[msg.sender] = balances[msg.sender].add(locked[msg.sender].lockedAmount);
         Unlock(msg.sender, locked[msg.sender].lockedAmount);
-        locked[msg.sender].lockedAmount = 0;        
+        locked[msg.sender].lockedAmount = 0;
       } else {
-        uint _value = locked[msg.sender].lockedAmount.sub(_amount);
-        balances[msg.sender] = balances[msg.sender].add(_value);
-        locked[msg.sender].lockedAmount = _value;
-        Unlock(msg.sender, _value);
+        balances[msg.sender] = balances[msg.sender].add(newLockedAmount);
+        locked[msg.sender].lockedAmount = newLockedAmount;
+        Unlock(msg.sender, _amount);
       }
       return true;
   }
 
   function _transfer(address _from, address _to, uint _value) internal {
+    require(!transferPaused);
     require(_to != address(0));
-    require(balances[_from].sub(_value.add(locked[_from].lockedAmount)) >= 0);
+    require(balances[_from] >= _value.add(locked[_from].lockedAmount));
     require(balances[_to].add(_value) >= balances[_to]);    
     balances[_from] = balances[_from].sub(_value);
     balances[_to] = balances[_to].add(_value);
@@ -192,19 +197,18 @@ contract StandardToken is ERC20, Ownable {
   }
   
   function transfer(address _to, uint _value) public returns (bool) {
-    require(!pauseTransfer);
     _transfer(msg.sender, _to, _value);
     return true;
   }
   
-  function balanceOf(address _owner) public constant returns (uint balance) {
-    return balances[_owner];
-  }
-
   function transferFrom(address _from, address _to, uint _value) public returns (bool) {
     allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
     _transfer(_from, _to, _value);
     return true;
+  }
+
+  function balanceOf(address _owner) public constant returns (uint balance) {
+    return balances[_owner];
   }
 
   function approve(address _spender, uint _value) public returns (bool) {
@@ -234,13 +238,13 @@ contract StandardToken is ERC20, Ownable {
     return true;
   }
 
-  
-  // Owner can transfer out any accidentally sent ERC20 tokens  
+  // owner can transfer out any accidentally sent ERC20 tokens  
   function transferAnyERC20Token(address tokenAddress, uint _amount) public onlyOwner returns (bool success) {
       return ERC20(tokenAddress).transfer(owner, _amount);
   }
 
 }
+
 contract WizzleInfinityToken is StandardToken {
     string public constant name = "Wizzle Infinity Token";
     string public constant symbol = "WZI";
