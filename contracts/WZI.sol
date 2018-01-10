@@ -135,7 +135,7 @@ contract StandardToken is ERC20, Ownable {
   function lock(uint _amount) public returns (bool) {
       require(msg.sender != address(0));
       require(_amount >= MIN_LOCK_AMOUNT);
-      require(balances[msg.sender].sub(_amount.add(locked[msg.sender].lockedAmount)) >= 0);
+      require(balances[msg.sender] >= _amount.add(locked[msg.sender].lockedAmount));
       _checkLock(msg.sender);
       locked[msg.sender].lockedAmount = locked[msg.sender].lockedAmount.add(_amount);
       locked[msg.sender].lastUpdated = now;
