@@ -1,5 +1,7 @@
 pragma solidity ^0.4.18;
 
+import 'Ownable.sol';
+
 library SafeMath {
   function mul(uint256 a, uint256 b) internal constant returns (uint256) {
     uint256 c = a * b;
@@ -31,7 +33,7 @@ contract Token {
   function mint(address _to, uint _amount) public returns (bool);
 }
 
-contract Crowdsale {
+contract Crowdsale is Ownable {
   using SafeMath for uint256;
   
   // token reference
@@ -64,6 +66,11 @@ contract Crowdsale {
     token = Token(_tokenAddress);
   }
 
+  function setRate(uint256 _rate) public onlyOwner {
+      require(_rate > 0);
+      rate = _rate;
+  }
+
   function () payable {
     buyTokens(msg.sender);
   }
@@ -72,10 +79,10 @@ contract Crowdsale {
     require(beneficiary != address(0));
     require(validPurchase());
     uint256 weiAmount = msg.value;
-    uint256 tokens = weiAmount.mul(rate);
+    uint256 tokenAmount = weiAmount.mul(rate);
     weiRaised = weiRaised.add(weiAmount);
-    token.mint(beneficiary, tokens);
-    TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+    token.mint(beneficiary, tokenAmount);
+    TokenPurchase(msg.sender, beneficiary, weiAmount, tokenAmount);
     wallet.transfer(weiAmount);
   }
 

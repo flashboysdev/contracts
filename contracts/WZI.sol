@@ -1,5 +1,7 @@
 pragma solidity ^0.4.18;
 
+import 'Ownable.sol';
+
 library SafeMath {
   function mul(uint a, uint b) internal constant returns (uint) {
     uint c = a * b;
@@ -21,30 +23,7 @@ library SafeMath {
   }
 }
 
-contract Ownable {
-
-  address public owner;
-
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-  
-  function Ownable() {
-    owner = msg.sender;
-  }
-
-  modifier onlyOwner() {
-    require(msg.sender == owner);
-    _;
-  }
-
-  function transferOwnership(address newOwner) onlyOwner public {
-    require(newOwner != address(0));
-    OwnershipTransferred(owner, newOwner);
-    owner = newOwner;
-    }
-}
-
 contract ERC20 {
-
   uint public totalSupply;
   function balanceOf(address who) public constant returns (uint);
   function transfer(address to, uint value) public returns (bool);
@@ -100,15 +79,20 @@ contract StandardToken is ERC20, Ownable {
       Unpause();
   }
 
-  // mint new tokens and update totalSupply
+  
   function mint(address _to, uint _amount) public onlyOwner returns (bool) {
+      _mint(_to, _amount);
+      Mint(_to, _amount);
+      return true;
+  }
+  
+  // mint new tokens and update totalSupply
+  function _mint(address _to, uint _amount) internal returns (bool) {
       require(_to != address(0));
       totalSupply = totalSupply.add(_amount);
       balances[_to] = balances[_to].add(_amount);
-      Mint(_to, _amount);
       return true;
-  } 
-
+  }
 
   // burn the tokens from address 
   // TODO: this is just a simple implementation; still need to see how 
@@ -158,13 +142,17 @@ contract StandardToken is ERC20, Ownable {
 
     if (locked[_from].lockedAmount >= MIN_LOCK_AMOUNT) { // or "> 0" ???
       uint referentTime = max(locked[_from].lastUpdated, locked[_from].lastClaimed);
+      uint timeDifference = now.sub(referentTime);
+      uint amountTemp = (locked[_from].lockedAmount.mul(timeDifference)).div(30 days); 
+      uint mintableAmount = amountTemp.div(100);
       //uint mintPercentage = now.sub(referentTime).div(30 days);
       //uint mintableAmount = (locked[_from].lockedAmount.mul(mintPercentage)).div(100);
+
       locked[_from].lastClaimed = now;
-      mint(_from, mintableAmount);
+      _mint(_from, mintableAmount);
       LockClaimed(_from, mintableAmount);
       return true;
-    } 
+    }
     //else {
     //  locked[_from].lastUpdated = now;
     //}
