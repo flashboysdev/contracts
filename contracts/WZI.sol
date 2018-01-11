@@ -134,6 +134,10 @@ contract StandardToken is ERC20, Ownable {
       return true;
   }
 
+  function max(uint a, uint b) internal pure returns(uint) {
+    return (a > b) ? a : b;
+  }
+
   // TODO: Maybe implement this in claimBonus() function fully
   function _checkLock(address _from) internal returns (bool) {
 
@@ -152,14 +156,18 @@ contract StandardToken is ERC20, Ownable {
       return false;
     */
 
-    if (locked[_from].lockedAmount > 0) {
-      uint mintPercentage = now.sub(locked[_from].lastUpdated).div(30 days);
-      uint mintableAmount = (locked[_from].lockedAmount.mul(mintPercentage)).div(100);
+    if (locked[_from].lockedAmount >= MIN_LOCK_AMOUNT) { // or "> 0" ???
+      uint referentTime = max(locked[_from].lastUpdated, locked[_from].lastClaimed);
+      //uint mintPercentage = now.sub(referentTime).div(30 days);
+      //uint mintableAmount = (locked[_from].lockedAmount.mul(mintPercentage)).div(100);
       locked[_from].lastClaimed = now;
       mint(_from, mintableAmount);
       LockClaimed(_from, mintableAmount);
       return true;
-    }
+    } 
+    //else {
+    //  locked[_from].lastUpdated = now;
+    //}
     return false;
   }
 
