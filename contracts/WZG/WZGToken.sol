@@ -58,11 +58,6 @@ contract WizzleGlobalToken is Controlled {
         creationBlock = block.number;
     }
 
-
-///////////////////
-// ERC20 Methods
-///////////////////
-
     /// @notice Send `_amount` tokens to `_to` from `msg.sender`
     /// @param _to The address of the recipient
     /// @param _amount The amount of tokens to be transferred
@@ -211,12 +206,7 @@ contract WizzleGlobalToken is Controlled {
         transfersEnabled = _transfersEnabled;
     }
 
-    /// @dev `getValueAt` retrieves the number of tokens at a given block number
-    /// @param checkpoints The history of values being queried
-    /// @param _block The block number to retrieve the value at
-    /// @return The number of tokens being queried
-    function getValueAt(Checkpoint[] storage checkpoints, uint _block
-    ) constant internal returns (uint) {
+    function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
         if (checkpoints.length == 0) return 0;
 
         // Shortcut for the actual value
@@ -238,16 +228,10 @@ contract WizzleGlobalToken is Controlled {
         return checkpoints[min].value;
     }
 
-    /// @dev `updateValueAtNow` used to update the `balances` map and the
-    ///  `totalSupplyHistory`
-    /// @param checkpoints The history of data being updated
-    /// @param _value The new number of tokens
-    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value
-    ) internal  {
-        if ((checkpoints.length == 0)
-        || (checkpoints[checkpoints.length -1].fromBlock < block.number)) {
-               Checkpoint storage newCheckPoint = checkpoints[ checkpoints.length++ ];
-               newCheckPoint.fromBlock =  uint128(block.number);
+    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
+        if ((checkpoints.length == 0) || (checkpoints[checkpoints.length-1].fromBlock < block.number)) {
+               Checkpoint storage newCheckPoint = checkpoints[checkpoints.length++];
+               newCheckPoint.fromBlock = uint128(block.number);
                newCheckPoint.value = uint128(_value);
            } else {
                Checkpoint storage oldCheckPoint = checkpoints[checkpoints.length-1];
