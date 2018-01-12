@@ -16,17 +16,16 @@ contract WizzleGlobalToken is Controlled {
 
     // block number when token was created
     uint public creationBlock;
-
     mapping (address => Checkpoint[]) balances;
     mapping (address => mapping (address => uint256)) allowed;
     Checkpoint[] totalSupplyHistory;
     bool public transfersEnabled;
     
-    function WizzleGlobalToken(string _tokenName, uint8 _decimalUnits, string _tokenSymbol, bool _transfersEnabled) public {
-        name = _tokenName;           
-        decimals = _decimalUnits;         
-        symbol = _tokenSymbol;                 
-        transfersEnabled = _transfersEnabled;
+    function WizzleGlobalToken() public {
+        name = "Wizzle Global Token";           
+        decimals = 0;         
+        symbol = "WZG";                 
+        transfersEnabled = false;
         creationBlock = block.number;
     }
 
@@ -42,6 +41,7 @@ contract WizzleGlobalToken is Controlled {
             require(allowed[_from][msg.sender] >= _amount);
             allowed[_from][msg.sender] -= _amount;
         }
+        // controller can always do transfers
         doTransfer(_from, _to, _amount);
         return true;
     }
@@ -55,6 +55,8 @@ contract WizzleGlobalToken is Controlled {
            require((_to != address(0)) && (_to != address(this)));
            var previousBalanceFrom = balanceOf(_from);
            require(previousBalanceFrom >= _amount);
+           var previousBalanceTo = balanceOf(_to);
+           require(previousBalanceTo + _amount >= previousBalanceTo); // Check for overflow
 
            // Alerts the token controller of the transfer
            /*
@@ -64,10 +66,7 @@ contract WizzleGlobalToken is Controlled {
            */
 
            updateValueAtNow(balances[_from], previousBalanceFrom - _amount);
-           var previousBalanceTo = balanceOf(_to);
-           require(previousBalanceTo + _amount >= previousBalanceTo); // Check for overflow
            updateValueAtNow(balances[_to], previousBalanceTo + _amount);
-
            Transfer(_from, _to, _amount);
     }
 
@@ -85,7 +84,7 @@ contract WizzleGlobalToken is Controlled {
             require(TokenController(controller).onApprove(msg.sender, _spender, _amount));
         }
         */
-        
+
         allowed[msg.sender][_spender] = _amount;
         Approval(msg.sender, _spender, _amount);
         return true;
@@ -206,7 +205,7 @@ contract WizzleGlobalToken is Controlled {
     /*
     function claimTokens(address _token) public onlyController {
         if (_token == 0x0) {
-            controller.transfer(this.balance);
+            controller.transfer(this.balance); // TODO: Maybe not needed if fallback calls revert()
             return;
         }
 
