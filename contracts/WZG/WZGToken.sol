@@ -3,30 +3,14 @@ pragma solidity ^0.4.18;
 import "./Controlled.sol";
 import "./TokenController.sol";
 
-contract ApproveAndCallFallBack {
-    function receiveApproval(address from, uint256 _amount, address _token, bytes _data) public;
-}
-
-/// @dev The actual token contract, the default controller is the msg.sender
-///  that deploys the contract, so usually this token will be deployed by a
-///  token controller contract, which Giveth will call a "Campaign"
 contract WizzleGlobalToken is Controlled {
 
-    string public name;                //The Token's name: e.g. DigixDAO Tokens
-    uint8 public decimals;             //Number of decimals of the smallest unit
-    string public symbol;              //An identifier: e.g. REP
-    string public version = 'MMT_0.2'; //An arbitrary versioning scheme
+    string public name;              
+    uint8 public decimals;            
+    string public symbol;
 
-
-    /// @dev `Checkpoint` is the structure that attaches a block number to a
-    ///  given value, the block number attached is the one that last changed the
-    ///  value
     struct  Checkpoint {
-
-        // `fromBlock` is the block number that the value was generated from
         uint128 fromBlock;
-
-        // `value` is the amount of tokens at a specific block number
         uint128 value;
     }
 
@@ -60,17 +44,15 @@ contract WizzleGlobalToken is Controlled {
 ////////////////
 
     function WizzleGlobalToken(
-        address _parentToken,
         uint _parentSnapShotBlock,
         string _tokenName,
         uint8 _decimalUnits,
         string _tokenSymbol,
         bool _transfersEnabled
     ) public {
-        name = _tokenName;                                 // Set the name
-        decimals = _decimalUnits;                          // Set the decimals
-        symbol = _tokenSymbol;                             // Set the symbol
-        //parentToken = WizzleGlobalToken(_parentToken);
+        name = _tokenName;           
+        decimals = _decimalUnits;         
+        symbol = _tokenSymbol;                 
         parentSnapShotBlock = _parentSnapShotBlock;
         transfersEnabled = _transfersEnabled;
         creationBlock = block.number;
@@ -115,15 +97,7 @@ contract WizzleGlobalToken is Controlled {
         return true;
     }
 
-    /// @dev This is the actual transfer function in the token contract, it can
-    ///  only be called by other functions in this contract.
-    /// @param _from The address holding the tokens being transferred
-    /// @param _to The address of the recipient
-    /// @param _amount The amount of tokens to be transferred
-    /// @return True if the transfer was successful
-    function doTransfer(address _from, address _to, uint _amount
-    ) internal {
-
+    function doTransfer(address _from, address _to, uint _amount) internal {
            if (_amount == 0) {
                Transfer(_from, _to, _amount);    // Follow the spec to louch the event when transfer 0
                return;
@@ -160,25 +134,12 @@ contract WizzleGlobalToken is Controlled {
 
     }
 
-    /// @param _owner The address that's balance is being requested
-    /// @return The balance of `_owner` at the current block
     function balanceOf(address _owner) public constant returns (uint256 balance) {
         return balanceOfAt(_owner, block.number);
     }
 
-    /// @notice `msg.sender` approves `_spender` to spend `_amount` tokens on
-    ///  its behalf. This is a modified version of the ERC20 approve function
-    ///  to be a little bit safer
-    /// @param _spender The address of the account able to transfer the tokens
-    /// @param _amount The amount of tokens to be approved for transfer
-    /// @return True if the approval was successful
     function approve(address _spender, uint256 _amount) public returns (bool success) {
         require(transfersEnabled);
-
-        // To change the approve amount you first have to reduce the addresses`
-        //  allowance to zero by calling `approve(_spender,0)` if it is not
-        //  already 0 to mitigate the race condition described here:
-        //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
         require((_amount == 0) || (allowed[msg.sender][_spender] == 0));
 
         // Alerts the token controller of the approve function call
@@ -191,102 +152,28 @@ contract WizzleGlobalToken is Controlled {
         return true;
     }
 
-    /// @dev This function makes it easy to read the `allowed[]` map
-    /// @param _owner The address of the account that owns the token
-    /// @param _spender The address of the account able to transfer the tokens
-    /// @return Amount of remaining tokens of _owner that _spender is allowed
-    ///  to spend
-    function allowance(address _owner, address _spender
-    ) public constant returns (uint256 remaining) {
+    function allowance(address _owner, address _spender) public constant returns (uint256 remaining) {
         return allowed[_owner][_spender];
     }
 
-    /// @notice `msg.sender` approves `_spender` to send `_amount` tokens on
-    ///  its behalf, and then a function is triggered in the contract that is
-    ///  being approved, `_spender`. This allows users to use their tokens to
-    ///  interact with contracts in one function call instead of two
-    /// @param _spender The address of the contract able to transfer the tokens
-    /// @param _amount The amount of tokens to be approved for transfer
-    /// @return True if the function call was successful
-    function approveAndCall(address _spender, uint256 _amount, bytes _extraData
-    ) public returns (bool success) {
-        require(approve(_spender, _amount));
-
-        ApproveAndCallFallBack(_spender).receiveApproval(
-            msg.sender,
-            _amount,
-            this,
-            _extraData
-        );
-
-        return true;
-    }
-
-    /// @dev This function makes it easy to get the total number of tokens
-    /// @return The total number of tokens
     function totalSupply() public constant returns (uint) {
         return totalSupplyAt(block.number);
     }
 
-
-////////////////
-// Query balance and totalSupply in History
-////////////////
-
-    /// @dev Queries the balance of `_owner` at a specific `_blockNumber`
-    /// @param _owner The address from which the balance will be retrieved
-    /// @param _blockNumber The block number when the balance is queried
-    /// @return The balance at `_blockNumber`
-    function balanceOfAt(address _owner, uint _blockNumber) public constant
-        returns (uint) {
-
-        // These next few lines are used when the balance of the token is
-        //  requested before a check point was ever created for this token, it
-        //  requires that the `parentToken.balanceOfAt` be queried at the
-        //  genesis block for that token as this contains initial balance of
-        //  this token
-        if ((balances[_owner].length == 0)
-            || (balances[_owner][0].fromBlock > _blockNumber)) {
-            if (address(parentToken) != 0) {
-                return parentToken.balanceOfAt(_owner, min(_blockNumber, parentSnapShotBlock));
-            } else {
-                // Has no parent
-                return 0;
-            }
-
-        // This will return the expected balance during normal situations
+    function balanceOfAt(address _owner, uint _blockNumber) public constant returns (uint) {
+        if ((balances[_owner].length == 0) || (balances[_owner][0].fromBlock > _blockNumber)) {
+            return 0;
         } else {
             return getValueAt(balances[_owner], _blockNumber);
         }
     }
-
-    /// @notice Total amount of tokens at a specific `_blockNumber`.
-    /// @param _blockNumber The block number when the totalSupply is queried
-    /// @return The total amount of tokens at `_blockNumber`
     function totalSupplyAt(uint _blockNumber) public constant returns(uint) {
-
-        // These next few lines are used when the totalSupply of the token is
-        //  requested before a check point was ever created for this token, it
-        //  requires that the `parentToken.totalSupplyAt` be queried at the
-        //  genesis block for this token as that contains totalSupply of this
-        //  token at this block number.
-        if ((totalSupplyHistory.length == 0)
-            || (totalSupplyHistory[0].fromBlock > _blockNumber)) {
-            if (address(parentToken) != 0) {
-                return parentToken.totalSupplyAt(min(_blockNumber, parentSnapShotBlock));
-            } else {
-                return 0;
-            }
-
-        // This will return the expected totalSupply during normal situations
+        if ((totalSupplyHistory.length == 0) || (totalSupplyHistory[0].fromBlock > _blockNumber)) {
+            return 0;
         } else {
             return getValueAt(totalSupplyHistory, _blockNumber);
         }
     }
-
-////////////////
-// Generate and destroy tokens
-////////////////
 
     /// @notice Generates `_amount` tokens that are assigned to `_owner`
     /// @param _owner The address that will be assigned the new tokens
@@ -304,7 +191,6 @@ contract WizzleGlobalToken is Controlled {
         return true;
     }
 
-
     /// @notice Burns `_amount` tokens from `_owner`
     /// @param _owner The address that will lose the tokens
     /// @param _amount The quantity of tokens to burn
@@ -321,20 +207,9 @@ contract WizzleGlobalToken is Controlled {
         return true;
     }
 
-////////////////
-// Enable tokens transfers
-////////////////
-
-
-    /// @notice Enables token holders to transfer their tokens freely if true
-    /// @param _transfersEnabled True if transfers are allowed in the clone
     function enableTransfers(bool _transfersEnabled) public onlyController {
         transfersEnabled = _transfersEnabled;
     }
-
-////////////////
-// Internal helper functions to query and set a value in a snapshot array
-////////////////
 
     /// @dev `getValueAt` retrieves the number of tokens at a given block number
     /// @param checkpoints The history of values being queried
@@ -380,9 +255,6 @@ contract WizzleGlobalToken is Controlled {
            }
     }
 
-    /// @dev Internal function to determine if an address is a contract
-    /// @param _addr The address being queried
-    /// @return True if `_addr` is a contract
     function isContract(address _addr) constant internal returns(bool) {
         uint size;
         if (_addr == 0) return false;
@@ -392,7 +264,6 @@ contract WizzleGlobalToken is Controlled {
         return size>0;
     }
 
-    /// @dev Helper function to return a min betwen the two uints
     function min(uint a, uint b) pure internal returns (uint) {
         return a < b ? a : b;
     }
@@ -400,14 +271,16 @@ contract WizzleGlobalToken is Controlled {
     /// @notice The fallback function: If the contract's controller has not been
     ///  set to 0, then the `proxyPayment` method is called which relays the
     ///  ether and creates tokens as described in the token controller contract
+    /*
     function () public payable {
         require(isContract(controller));
         require(TokenController(controller).proxyPayment.value(msg.value)(msg.sender));
     }
+    */
 
-//////////
-// Safety Methods
-//////////
+    function () public payable {
+        revert();
+    }
 
     /// @notice This method can be used by the controller to extract mistakenly
     ///  sent tokens to this contract.
