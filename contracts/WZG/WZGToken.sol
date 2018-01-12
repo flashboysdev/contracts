@@ -14,70 +14,31 @@ contract WizzleGlobalToken is Controlled {
         uint128 value;
     }
 
-    // `parentToken` is the Token address that was cloned to produce this token;
-    //  it will be 0x0 for a token that was not cloned
-    //WizzleGlobalToken public parentToken;
-
-    // `parentSnapShotBlock` is the block number from the Parent Token that was
-    //  used to determine the initial distribution of the Clone Token
-    uint public parentSnapShotBlock;
-
-    // `creationBlock` is the block number that the Clone Token was created
+    // block number when token was created
     uint public creationBlock;
 
-    // `balances` is the map that tracks the balance of each address, in this
-    //  contract when the balance changes the block number that the change
-    //  occurred is also included in the map
     mapping (address => Checkpoint[]) balances;
-
-    // `allowed` tracks any extra transfer rights as in all ERC20 tokens
     mapping (address => mapping (address => uint256)) allowed;
-
-    // Tracks the history of the `totalSupply` of the token
     Checkpoint[] totalSupplyHistory;
-
-    // Flag that determines if the token is transferable or not.
     bool public transfersEnabled;
-
-////////////////
-// Constructor
-////////////////
-
-    function WizzleGlobalToken(uint _parentSnapShotBlock, string _tokenName, uint8 _decimalUnits, string _tokenSymbol, bool _transfersEnabled) public {
+    
+    function WizzleGlobalToken(string _tokenName, uint8 _decimalUnits, string _tokenSymbol, bool _transfersEnabled) public {
         name = _tokenName;           
         decimals = _decimalUnits;         
         symbol = _tokenSymbol;                 
-        parentSnapShotBlock = _parentSnapShotBlock;
         transfersEnabled = _transfersEnabled;
         creationBlock = block.number;
     }
 
-    /// @notice Send `_amount` tokens to `_to` from `msg.sender`
-    /// @param _to The address of the recipient
-    /// @param _amount The amount of tokens to be transferred
-    /// @return Whether the transfer was successful or not
     function transfer(address _to, uint256 _amount) public returns (bool success) {
         require(transfersEnabled);
         doTransfer(msg.sender, _to, _amount);
         return true;
     }
 
-    /// @notice Send `_amount` tokens to `_to` from `_from` on the condition it
-    ///  is approved by `_from`
-    /// @param _from The address holding the tokens being transferred
-    /// @param _to The address of the recipient
-    /// @param _amount The amount of tokens to be transferred
-    /// @return True if the transfer was successful
     function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) {
-
-        // The controller of this contract can move tokens around at will,
-        //  this is important to recognize! Confirm that you trust the
-        //  controller of this contract, which in most situations should be
-        //  another open source smart contract or 0x0
         if (msg.sender != controller) {
             require(transfersEnabled);
-
-            // The standard ERC 20 transferFrom functionality
             require(allowed[_from][msg.sender] >= _amount);
             allowed[_from][msg.sender] -= _amount;
         }
@@ -91,35 +52,23 @@ contract WizzleGlobalToken is Controlled {
                return;
            }
 
-           require(parentSnapShotBlock < block.number);
-
-           // Do not allow transfer to 0x0 or the token contract itself
-           require((_to != 0) && (_to != address(this)));
-
-           // If the amount being transfered is more than the balance of the
-           //  account the transfer throws
-           var previousBalanceFrom = balanceOfAt(_from, block.number);
-
+           require((_to != address(0)) && (_to != address(this)));
+           var previousBalanceFrom = balanceOf(_from);
            require(previousBalanceFrom >= _amount);
 
            // Alerts the token controller of the transfer
+           /*
            if (isContract(controller)) {
                require(TokenController(controller).onTransfer(_from, _to, _amount));
            }
+           */
 
-           // First update the balance array with the new value for the address
-           //  sending the tokens
            updateValueAtNow(balances[_from], previousBalanceFrom - _amount);
-
-           // Then update the balance array with the new value for the address
-           //  receiving the tokens
-           var previousBalanceTo = balanceOfAt(_to, block.number);
+           var previousBalanceTo = balanceOf(_to);
            require(previousBalanceTo + _amount >= previousBalanceTo); // Check for overflow
            updateValueAtNow(balances[_to], previousBalanceTo + _amount);
 
-           // An event to make the transfer easy to find on the blockchain
            Transfer(_from, _to, _amount);
-
     }
 
     function balanceOf(address _owner) public constant returns (uint256 balance) {
@@ -131,10 +80,12 @@ contract WizzleGlobalToken is Controlled {
         require((_amount == 0) || (allowed[msg.sender][_spender] == 0));
 
         // Alerts the token controller of the approve function call
+        /*
         if (isContract(controller)) {
             require(TokenController(controller).onApprove(msg.sender, _spender, _amount));
         }
-
+        */
+        
         allowed[msg.sender][_spender] = _amount;
         Approval(msg.sender, _spender, _amount);
         return true;
@@ -163,11 +114,7 @@ contract WizzleGlobalToken is Controlled {
         }
     }
 
-    /// @notice Generates `_amount` tokens that are assigned to `_owner`
-    /// @param _owner The address that will be assigned the new tokens
-    /// @param _amount The quantity of tokens generated
-    /// @return True if the tokens are generated correctly
-    function generateTokens(address _owner, uint _amount) public onlyController returns (bool) {
+    function mint(address _owner, uint _amount) public onlyController returns (bool) {
         uint curTotalSupply = totalSupply();
         require(curTotalSupply + _amount >= curTotalSupply); // Check for overflow
         uint previousBalanceTo = balanceOf(_owner);
@@ -175,21 +122,6 @@ contract WizzleGlobalToken is Controlled {
         updateValueAtNow(totalSupplyHistory, curTotalSupply + _amount);
         updateValueAtNow(balances[_owner], previousBalanceTo + _amount);
         Transfer(0, _owner, _amount);
-        return true;
-    }
-
-    /// @notice Burns `_amount` tokens from `_owner`
-    /// @param _owner The address that will lose the tokens
-    /// @param _amount The quantity of tokens to burn
-    /// @return True if the tokens are burned correctly
-    function destroyTokens(address _owner, uint _amount) onlyController public returns (bool) {
-        uint curTotalSupply = totalSupply();
-        require(curTotalSupply >= _amount);
-        uint previousBalanceFrom = balanceOf(_owner);
-        require(previousBalanceFrom >= _amount);
-        updateValueAtNow(totalSupplyHistory, curTotalSupply - _amount);
-        updateValueAtNow(balances[_owner], previousBalanceFrom - _amount);
-        Transfer(_owner, 0, _amount);
         return true;
     }
 
@@ -232,6 +164,7 @@ contract WizzleGlobalToken is Controlled {
            }
     }
 
+    /*
     function isContract(address _addr) constant internal returns(bool) {
         uint size;
         if (_addr == 0) 
@@ -241,6 +174,7 @@ contract WizzleGlobalToken is Controlled {
         }
         return size>0;
     }
+    */
 
     function min(uint a, uint b) pure internal returns (uint) {
         return a < b ? a : b;
@@ -260,6 +194,11 @@ contract WizzleGlobalToken is Controlled {
         revert();
     }
 
+    event ClaimedTokens(address indexed _token, address indexed _controller, uint _amount);
+    event Transfer(address indexed _from, address indexed _to, uint256 _amount);
+    event NewCloneToken(address indexed _cloneToken, uint _snapshotBlock);
+    event Approval(address indexed _owner, address indexed _spender, uint256 _amount);
+
     /// @notice This method can be used by the controller to extract mistakenly
     ///  sent tokens to this contract.
     /// @param _token The address of the token contract that you want to recover
@@ -277,10 +216,5 @@ contract WizzleGlobalToken is Controlled {
         ClaimedTokens(_token, controller, balance);
     }
     */
-
-    event ClaimedTokens(address indexed _token, address indexed _controller, uint _amount);
-    event Transfer(address indexed _from, address indexed _to, uint256 _amount);
-    event NewCloneToken(address indexed _cloneToken, uint _snapshotBlock);
-    event Approval(address indexed _owner, address indexed _spender, uint256 _amount);
 
 }
