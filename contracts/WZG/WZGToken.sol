@@ -9,7 +9,7 @@ contract WizzleGlobalToken is Controlled {
     uint8 public decimals;            
     string public symbol;
 
-    struct  Checkpoint {
+    struct Checkpoint {
         uint128 fromBlock;
         uint128 value;
     }
@@ -43,13 +43,7 @@ contract WizzleGlobalToken is Controlled {
 // Constructor
 ////////////////
 
-    function WizzleGlobalToken(
-        uint _parentSnapShotBlock,
-        string _tokenName,
-        uint8 _decimalUnits,
-        string _tokenSymbol,
-        bool _transfersEnabled
-    ) public {
+    function WizzleGlobalToken(uint _parentSnapShotBlock, string _tokenName, uint8 _decimalUnits, string _tokenSymbol, bool _transfersEnabled) public {
         name = _tokenName;           
         decimals = _decimalUnits;         
         symbol = _tokenSymbol;                 
@@ -74,8 +68,7 @@ contract WizzleGlobalToken is Controlled {
     /// @param _to The address of the recipient
     /// @param _amount The amount of tokens to be transferred
     /// @return True if the transfer was successful
-    function transferFrom(address _from, address _to, uint256 _amount
-    ) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) {
 
         // The controller of this contract can move tokens around at will,
         //  this is important to recognize! Confirm that you trust the
@@ -174,8 +167,7 @@ contract WizzleGlobalToken is Controlled {
     /// @param _owner The address that will be assigned the new tokens
     /// @param _amount The quantity of tokens generated
     /// @return True if the tokens are generated correctly
-    function generateTokens(address _owner, uint _amount
-    ) public onlyController returns (bool) {
+    function generateTokens(address _owner, uint _amount) public onlyController returns (bool) {
         uint curTotalSupply = totalSupply();
         require(curTotalSupply + _amount >= curTotalSupply); // Check for overflow
         uint previousBalanceTo = balanceOf(_owner);
@@ -190,8 +182,7 @@ contract WizzleGlobalToken is Controlled {
     /// @param _owner The address that will lose the tokens
     /// @param _amount The quantity of tokens to burn
     /// @return True if the tokens are burned correctly
-    function destroyTokens(address _owner, uint _amount
-    ) onlyController public returns (bool) {
+    function destroyTokens(address _owner, uint _amount) onlyController public returns (bool) {
         uint curTotalSupply = totalSupply();
         require(curTotalSupply >= _amount);
         uint previousBalanceFrom = balanceOf(_owner);
@@ -207,18 +198,20 @@ contract WizzleGlobalToken is Controlled {
     }
 
     function getValueAt(Checkpoint[] storage checkpoints, uint _block) constant internal returns (uint) {
-        if (checkpoints.length == 0) return 0;
+        if (checkpoints.length == 0) 
+            return 0;
 
         // Shortcut for the actual value
         if (_block >= checkpoints[checkpoints.length-1].fromBlock)
             return checkpoints[checkpoints.length-1].value;
-        if (_block < checkpoints[0].fromBlock) return 0;
+        if (_block < checkpoints[0].fromBlock) 
+            return 0;
 
         // Binary search of the value in the array
         uint min = 0;
         uint max = checkpoints.length-1;
         while (max > min) {
-            uint mid = (max + min + 1)/ 2;
+            uint mid = (max + min + 1) / 2;
             if (checkpoints[mid].fromBlock<=_block) {
                 min = mid;
             } else {
@@ -228,7 +221,7 @@ contract WizzleGlobalToken is Controlled {
         return checkpoints[min].value;
     }
 
-    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal  {
+    function updateValueAtNow(Checkpoint[] storage checkpoints, uint _value) internal {
         if ((checkpoints.length == 0) || (checkpoints[checkpoints.length-1].fromBlock < block.number)) {
                Checkpoint storage newCheckPoint = checkpoints[checkpoints.length++];
                newCheckPoint.fromBlock = uint128(block.number);
@@ -241,7 +234,8 @@ contract WizzleGlobalToken is Controlled {
 
     function isContract(address _addr) constant internal returns(bool) {
         uint size;
-        if (_addr == 0) return false;
+        if (_addr == 0) 
+            return false;
         assembly {
             size := extcodesize(_addr)
         }
