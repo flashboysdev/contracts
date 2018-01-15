@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
 import "./Controlled.sol";
-import "./TokenController.sol";
+//import "./TokenController.sol";
 
 contract WizzleGlobalToken is Controlled {
 
@@ -48,7 +48,7 @@ contract WizzleGlobalToken is Controlled {
 
     function doTransfer(address _from, address _to, uint _amount) internal {
            if (_amount == 0) {
-               Transfer(_from, _to, _amount);    // Follow the spec to louch the event when transfer 0
+               Transfer(_from, _to, _amount); // follow the spec to raise the event when transfer 0
                return;
            }
 
