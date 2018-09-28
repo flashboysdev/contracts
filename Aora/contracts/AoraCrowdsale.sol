@@ -14,19 +14,19 @@ contract AoraCrowdsale is Whitelist, Ownable {
     IERC20 public token;
 
     // Start of presale timestamp in miliseconds
-    uint public startOfPresale = 1538352000000; // October 1, 2018 12:00:00 AM
+    uint public startOfPresale;
 
     // End of presale timestamp in miliseconds
-    uint public endOfPresale = 1541030399000; // October 31, 2018 11:59:59 PM
+    uint public endOfPresale;
 
     // Start of crowdsale timestamp in miliseconds
-    uint public startOfCrowdsale = 1541030400000; // November 1, 2018 12:00:00 AM
+    uint public startOfCrowdsale;
 
     // End of crowdsale timestamp in miliseconds
-    uint public endOfCrowdsale = 1543622399000; // November 30, 2018 11:59:59 PM
+    uint public endOfCrowdsale;
 
     // Maximum number of tokens that can be sold
-    uint public cap = 250000000 ether;
+    uint public cap;
 
     // Tokens sold so far
     uint public tokensSold = 0;
@@ -37,16 +37,40 @@ contract AoraCrowdsale is Whitelist, Ownable {
     // Deployment block of the contract 
     uint public deploymentBlock;
 
-    // Tokens per US Dollar rate, fixed for this crowsale. Price of a token is 0.20$USD
+    // Tokens per US Dollar rate, fixed for this crowsale.
     uint public tokensPerUsdRate = 5;
 
     // Factor that we multiply with to get whole tokens from cents 
     uint constant public centsToWholeTokenFactor = 10 ** 16; 
 
     /**
-    * @param _token Address of the token contract 
+    * @param _startOfPresale start of presale timestamp
+    * @param _endOfPresale  end of presale timestamp
+    * @param _startOfCrowdsale start of crowdsale timestamp
+    * @param _endOfCrowdsale end of crowdsale timestamp
+    * @param _tokensPerUsdRate how many tokens per US Dollar contributed
+    * @param _cap total amount of sellable tokens 
+    * @param _token address of the token contract 
     */
-    constructor(IERC20 _token) public addressNotZero(_token) {
+    constructor(
+        uint _startOfPresale, 
+        uint _endOfPresale, 
+        uint _startOfCrowdsale, 
+        uint _endOfCrowdsale, 
+        uint _tokensPerUsdRate, 
+        uint _cap,
+        IERC20 _token
+        ) public addressNotZero(_token) {
+        
+        startOfPresale = _startOfPresale;
+        endOfPresale = _endOfPresale;
+        startOfCrowdsale = _startOfCrowdsale;
+        endOfCrowdsale = _endOfCrowdsale;
+
+        tokensPerUsdRate = _tokensPerUsdRate; 
+
+        cap = _cap;
+
         token = _token;
 
         deploymentBlock = block.number;
@@ -57,7 +81,7 @@ contract AoraCrowdsale is Whitelist, Ownable {
     * @param usdAmount amount of US Dollars in cents 
     */ 
     modifier hasValue(uint usdAmount) {
-        require(usdAmount > 0, "You have to give us something, buddy.");
+        require(usdAmount > 0);
         _;
     }
 

@@ -1,0 +1,26 @@
+    // Start of presale timestamp in miliseconds
+    uint public startOfPresale = 1538352000000; // October 1, 2018 12:00:00 AM
+
+    // End of presale timestamp in miliseconds
+    uint public endOfPresale = 1541030399000; // October 31, 2018 11:59:59 PM
+
+    // Start of crowdsale timestamp in miliseconds
+    uint public startOfCrowdsale = 1541030400000; // November 1, 2018 12:00:00 AM
+
+    // End of crowdsale timestamp in miliseconds
+    uint public endOfCrowdsale = 1543622399000; // November 30, 2018 11:59:59 PM
+
+    // Maximum number of tokens that can be sold
+    uint public cap = 250000000 ether;
+
+    // Tokens sold so far
+    uint public tokensSold = 0;
+
+    // US Dollars raised so far in cents 
+    uint public usdRaised = 0;
+
+    // Deployment block of the contract 
+    uint public deploymentBlock;
+
+    // Tokens per US Dollar rate, fixed for this crowsale. Price of a token is 0.20$USD
+    uint public tokensPerUsdRate = 5;

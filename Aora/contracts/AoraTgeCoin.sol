@@ -139,7 +139,7 @@ contract AoraTgeCoin is IERC20, Ownable {
     * recover set to 0 in case you want to extract ether. It can't be ElpisToken.
     */
     function claimTokens(address _token) public onlyOwner {
-        require(_token != address(convertContract), "Na-a! That is insanitiy!");
+        require(_token != address(convertContract));
 
         if (_token == address(0)) {
             owner.transfer(address(this).balance);
