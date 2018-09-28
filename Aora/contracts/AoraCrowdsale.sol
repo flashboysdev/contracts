@@ -44,7 +44,7 @@ contract AoraCrowdsale is Whitelist, Ownable {
     uint constant public centsToWholeTokenFactor = 10 ** 16; 
 
     /**
-        @param _token Address of the token contract 
+    * @param _token Address of the token contract 
     */
     constructor(IERC20 _token) public addressNotZero(_token) {
         token = _token;
@@ -52,65 +52,97 @@ contract AoraCrowdsale is Whitelist, Ownable {
         deploymentBlock = block.number;
     }
 
-    // Signifies weather or not the argument has any value 
+    /**
+    * @dev signifies weather or not the argument has any value
+    * @param usdAmount amount of US Dollars in cents 
+    */ 
     modifier hasValue(uint usdAmount) {
         require(usdAmount > 0, "You have to give us something, buddy.");
         _;
     }
 
-    // Signifies weather or not crowdsale is over
+    /**
+    * @dev signifies weather or not crowdsale is over
+    */
     modifier crowdsaleNotOver() {
         require(isCrowdsale()); 
         _;
     }
 
-    // Sets the start of presale
+    /** 
+    * @dev sets the start of presale
+    */
     function setStartOfPresale(uint _startOfPresale) external onlyOwner {
         emit OnStartOfPresaleSet(_startOfPresale, startOfPresale); 
         startOfPresale = _startOfPresale;
     }
 
-    // Sets the end of presale
+    /**
+    * @dev sets the end of presale
+    * @param _endOfPresale new timestamp value  
+    */
     function setEndOfPresale(uint _endOfPresale) external onlyOwner {
         emit OnEndOfPresaleSet(_endOfPresale, endOfPresale); 
         endOfPresale = _endOfPresale;
     }
 
-    // Sets the start of crowdsale
+    /**
+    * @dev sets the start of crowdsale
+    * @param _startOfCrowdsale new timestamp value
+    */
     function setStartOfCrowdsale(uint _startOfCrowdsale) external onlyOwner {
         emit OnStartOfCrowdsaleSet(_startOfCrowdsale, startOfCrowdsale);
         startOfCrowdsale = _startOfCrowdsale;
     }
 
-    // Sets the end of crowdsale
+    /**
+    * @dev sets the end of crowdsale
+    * @param _endOfCrowdsale new timestamp value
+    */
     function setEndOfCrowdsale(uint _endOfCrowdsale) external onlyOwner {
         emit OnEndOfCrowdsaleSet(_endOfCrowdsale, endOfCrowdsale);
         endOfCrowdsale = _endOfCrowdsale;
     }
 
-    // Sets the cap
+    /** 
+    * @dev sets the cap
+    * @param _cap new cap value
+    */
     function setCap(uint _cap) external onlyOwner { 
         emit OnCapSet(_cap, cap);
         cap = _cap;
     }
 
-    // Setter for the tokensPerUsdRate 
+    /**
+    * @dev sets the tokensPerUsdRate
+    * @param _tokensPerUsdRate new tokens per US Dollar rate
+    */
     function setTokensPerUsdRate(uint _tokensPerUsdRate) external onlyOwner {
         emit OnTokensPerUsdRateSet(_tokensPerUsdRate, tokensPerUsdRate);
         tokensPerUsdRate = _tokensPerUsdRate;
     }
 
-    // Returns weather or not the presale is over
+    /**
+    * @dev returns weather or not the presale is over
+    */
     function isPresale() public view returns(bool) {
         return now < endOfPresale;
     }
 
-    // Returns weather or not the crowdsale is over
+    /** 
+    * @dev returns weather or not the crowdsale is over
+    */
     function isCrowdsale() public view returns(bool) {
         return now < endOfCrowdsale;
     }
 
-    // Creates a contribution for the specified beneficiary, with the specified wei amount value
+    /**
+    * @dev Creates a contribution for the specified beneficiary.
+    *   Callable only by the owner, while the crowdsale is not over. 
+    *   Whitelists the beneficiary as well, to optimize gas cost.
+    * @param beneficiary address of the beneficiary
+    * @param usdAmount contribution value in cents
+    */
     function createContribution(address beneficiary, uint usdAmount) public 
     onlyOwner 
     addressNotZero(beneficiary) 
@@ -135,8 +167,11 @@ contract AoraCrowdsale is Whitelist, Ownable {
         emit OnContributionCreated(beneficiary, usdAmount);
     }
 
-    // Create a bulk of contributions 
-    // USDollar value of the each contribution in cents
+    /**
+    * @dev Create contributions in bulk, to optimize gas cost.
+    * @param beneficiaries addresses of beneficiaries 
+    * @param usdAmounts USDollar value of the each contribution in cents.
+    */
     function createBulkContributions(address[] beneficiaries, uint[] usdAmounts) external onlyOwner {
         require(beneficiaries.length == usdAmounts.length);
         for (uint i = 0; i < beneficiaries.length; ++i)

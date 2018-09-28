@@ -32,20 +32,36 @@ contract AoraTgeCoin is IERC20, Ownable {
     // Token balances 
     mapping (address => uint) balances;
 
-    // Sets the convertContract address
+    /**
+    * @dev Sets the convertContract address. 
+    *   In the future, there will be a need to convert Aora TGE Coins to Aora Coins. 
+    *   That will be done using the Convert contract which will be deployed in the future.
+    *   Convert contract will do the functions of converting Aora TGE Coins to Aora Coins
+    *   and enforcing vesting rules. 
+    * @param _convert address of the convert contract.
+    */
     function setConvertContract(address _convert) external onlyOwner {
         require(address(0) != address(_convert));
         convertContract = _convert;
         emit OnConvertContractSet(_convert);
     }
 
-    // Sets the convertContract address
+    /** 
+    * @dev Sets the crowdsaleContract address.
+    *   transfer function is modified in a way that only owner and crowdsale can call it.
+    *   That is done because crowdsale will sell the tokens, and owner will be allowed
+    *   to assign AORATGE to addresses in a way that matches the Aora business model.
+    * @param _crowdsale address of the crowdsale contract.
+    */
     function setCrowdsaleContract(address _crowdsale) external onlyOwner {
         require(address(0) != address(_crowdsale));
         convertContract = _crowdsale;
         emit OnCrowdsaleContractSet(_crowdsale);
     }
 
+    /**
+    * @dev only convert contract can call the modified function
+    */
     modifier onlyConvert {
         require(msg.sender == convertContract);
         _;
@@ -70,12 +86,13 @@ contract AoraTgeCoin is IERC20, Ownable {
     }
 
     /**
-    * @dev Transfer token for a specified address
+    * @dev Transfer token for a specified address.
+    *   Only callable by the owner or crowdsale contract, to prevent token trading.
+    *   AORA will be a tradable token. AORATGE will be exchanged for AORA in 1-1 ratio. 
     * @param _to The address to transfer to.
     * @param _value The amount to be transferred.
     */
     function transfer(address _to, uint256 _value) public returns (bool) {
-        // Only owner or crowdsale contract can call this method 
         require(msg.sender == owner || msg.sender == crowdsaleContract);
 
         require(_value <= balances[msg.sender]);
@@ -93,9 +110,12 @@ contract AoraTgeCoin is IERC20, Ownable {
     }
 
     /**
-    * @dev Transfer tokens from one address to another
+    * @dev Transfer tokens from one address to another. 
+    *   Only callable by the convert contract. Used in the process of converting 
+    *   AORATGE to AORA. Will be called from convert contracts convert() function.
     * @param _from address The address which you want to send tokens from
-    * @param _to address The address which you want to transfer to
+    * @param _to address The address which you want to transfer to. 
+    *   Only 0x0 address, because of a need to prevent token recycling. 
     * @param _value uint256 the amount of tokens to be transferred
     */
     function transferFrom(
