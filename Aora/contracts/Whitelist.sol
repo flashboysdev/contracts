@@ -25,17 +25,17 @@ contract Whitelist {
       * @dev Throws if called by any account other than the whitelister.
       */
     modifier onlyWhitelister() {
-        require(msg.sender == whitelister, "Only whitelister can call this method.");
+        require(msg.sender == whitelister);
         _;
     }
 
     modifier addressNotZero(address _address) {
-        require(_address != address(0), "We don't like address 0x0."); // TODO: Change the message to something that makes more sense
+        require(_address != address(0));
         _;
     }
 
     modifier onlyWhitelisted(address _address) {
-        require(whitelist[_address], "Only whitelisted addresses can do that.");
+        require(whitelist[_address]);
         _;
     }
 
