@@ -55,7 +55,7 @@ contract AoraTgeCoin is IERC20, Ownable {
     */
     function setCrowdsaleContract(address _crowdsale) external onlyOwner {
         require(address(0) != address(_crowdsale));
-        convertContract = _crowdsale;
+        crowdsaleContract = _crowdsale;
         emit OnCrowdsaleContractSet(_crowdsale);
     }
 
