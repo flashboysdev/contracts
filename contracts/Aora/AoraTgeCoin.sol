@@ -2,7 +2,6 @@
 pragma solidity ^0.4.24;
 
 import "./Ownable.sol";
-import "./ERC20.sol";
 import "./IERC20.sol";
 import "./SafeMath.sol";
 
@@ -133,20 +132,25 @@ contract AoraTgeCoin is IERC20, Ownable {
     }
 
     /**
+    * @dev Fallback function. Can't send ether to this contract. 
+    */
+    function () external payable {
+        revert();
+    }
+
+    /**
     * @dev This method can be used by the owner to extract mistakenly sent tokens
     * or Ether sent to this contract.
     * @param _token address The address of the token contract that you want to
     * recover set to 0 in case you want to extract ether. It can't be ElpisToken.
     */
     function claimTokens(address _token) public onlyOwner {
-        require(_token != address(convertContract));
-
         if (_token == address(0)) {
             owner.transfer(address(this).balance);
             return;
         }
 
-        ERC20 tokenReference = ERC20(_token);
+        IERC20 tokenReference = IERC20(_token);
         uint balance = tokenReference.balanceOf(address(this));
         tokenReference.transfer(owner, balance);
         emit OnClaimTokens(_token, owner, balance);

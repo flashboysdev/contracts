@@ -2,7 +2,6 @@
 pragma solidity ^0.4.24;
 
 import "./Whitelist.sol";
-import "./ERC20.sol";
 import "./IERC20.sol";
 import "./Ownable.sol";
 import "./SafeMath.sol";
@@ -74,6 +73,13 @@ contract AoraCrowdsale is Whitelist, Ownable {
         token = _token;
 
         deploymentBlock = block.number;
+    }
+
+    /**
+    * @dev Fallback function. Can't send ether to this contract. 
+    */
+    function () external payable {
+        revert();
     }
 
     /**
@@ -180,9 +186,11 @@ contract AoraCrowdsale is Whitelist, Ownable {
         if(isPresale())
             aoraTgeAmount = aoraTgeAmount.mul(11).div(10); // 10% presale bonus, paid out from crowdsale pool
 
-        require(tokensSold.add(aoraTgeAmount) <= cap);
+        uint newTokensSoldAmount = tokensSold.add(aoraTgeAmount);
 
-        tokensSold = tokensSold.add(aoraTgeAmount);
+        require(newTokensSoldAmount <= cap);
+
+        tokensSold = newTokensSoldAmount;
 
         token.transfer(beneficiary, aoraTgeAmount);
 
@@ -216,7 +224,7 @@ contract AoraCrowdsale is Whitelist, Ownable {
             return;
         }
 
-        ERC20 tokenReference = ERC20(_token);
+        IERC20 tokenReference = IERC20(_token);
         uint balance = tokenReference.balanceOf(address(this));
         tokenReference.transfer(owner, balance);
         emit OnClaimTokens(_token, owner, balance);
