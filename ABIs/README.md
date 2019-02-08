@@ -1,0 +1,1 @@
+To interact with the contracts using www.mycrypto.com or similar service, one needs the contract's ABI. ABI stands for Application Binary Interface. Copy and paste the entire ABI of the contract that you wish to interact with.
